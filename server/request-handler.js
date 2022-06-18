@@ -11,8 +11,30 @@ this file and include it in basic-server.js so that it actually works.
 *Hint* Check out the node module documentation at http://nodejs.org/api/modules.html.
 
 **************************************************************/
+const fs = require('fs');
+//fs.readFile( filename, encoding(charset ), (err, data) => {} )
+// fs.writeFile( path, data, options, (err) => {
+// successful callback
+// });
 
-var requestHandler = function(request, response) {
+// fs.readFile(`${__dirname}/data.json`, 'utf8', (err, data) => {
+//   if (err) {
+//     //we have to tell the client it was unsucessful reading...
+//     return;
+//   }
+//   console.log(data);
+//   assignDatabase(data);
+// });
+
+
+let requestHandler = function(request, response) {
+  let database = JSON.parse(fs.readFileSync(`${__dirname}/data.json`, 'utf8'));
+  console.log(database);
+
+
+  let statusCode;
+
+  // console.log(request.url == '/classes/message');
   // Request and Response come from node's http module.
   //
   // They include information about both the incoming request, such as
@@ -27,19 +49,58 @@ var requestHandler = function(request, response) {
   // Adding more logging to your server can be an easy way to get passive
   // debugging help, but you should always be careful about leaving stray
   // console.logs in your code.
+
+  //POST
+  //match url to classes/message if success, parse the data and add it to our database;
+  //and run the succesCB
+  //Else if there is no match, we call the errorcb statusCode = 404
+
+  let send;
+  console.log(request.url);
+
+  if (request.url === '/classes/messages') {
+    const method = request.method;
+    if (method === 'POST') {
+      statusCode = 201;
+      console.log('Successful post');
+      // request.data;
+      // fs.writeFile('./data.json', );
+
+      database.push(JSON.parse(request.data));
+      send = database;
+    }
+    if (method === 'GET') {
+      statusCode = 200;
+      console.log('successful get');
+      send = database;
+    }
+  } else {
+    statusCode = 404;
+    console.log('failed');
+    console.log(request);
+  }
+  //`http://127.0.0.1:3000/classes/messages`,
+
+  //GET
+  //match url to classes/message if success, get the data and send it to client from our database via succesful callback (provide data as argument)
+  //Else  if no match, we call the errorcb statusCode = 404
+
+
   console.log('Serving request type ' + request.method + ' for url ' + request.url);
 
-  // The outgoing status.
-  var statusCode = 200;
-
   // See the note below about CORS headers.
-  var headers = defaultCorsHeaders;
+  var headers = {
+    'access-control-allow-origin': '*',
+    'access-control-allow-methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'access-control-allow-headers': 'content-type, accept, authorization',
+    'access-control-max-age': 10 // Seconds.
+  };
 
   // Tell the client we are sending them plain text.
   //
   // You will need to change this if you are sending something
   // other than plain text, like JSON or HTML.
-  headers['Content-Type'] = 'text/plain';
+  headers['Content-Type'] = 'application/json';
 
   // .writeHead() writes to the request line and headers of the response,
   // which includes the status and all headers.
@@ -52,7 +113,7 @@ var requestHandler = function(request, response) {
   //
   // Calling .end "flushes" the response's internal buffer, forcing
   // node to actually send all the data over to the client.
-  response.end('Hello, World!');
+  response.end(JSON.stringify(send));
 };
 
 // These headers will allow Cross-Origin Resource Sharing (CORS).
@@ -64,9 +125,11 @@ var requestHandler = function(request, response) {
 //
 // Another way to get around this restriction is to serve you chat
 // client from this domain by setting up static file serving.
-var defaultCorsHeaders = {
-  'access-control-allow-origin': '*',
-  'access-control-allow-methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'access-control-allow-headers': 'content-type, accept, authorization',
-  'access-control-max-age': 10 // Seconds.
-};
+// var defaultCorsHeaders = {
+//   'access-control-allow-origin': '*',
+//   'access-control-allow-methods': 'GET, POST, PUT, DELETE, OPTIONS',
+//   'access-control-allow-headers': 'content-type, accept, authorization',
+//   'access-control-max-age': 10 // Seconds.
+// };
+
+module.exports.handleRequest = requestHandler;
